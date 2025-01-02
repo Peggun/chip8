@@ -25,7 +25,7 @@ fn main() {
     }
 
     let video_scale = args[1].parse::<u16>().expect("Failed to parse Scale");
-    let cycle_delay = 2; // sets to 500Hz
+    let cycle_delay = 4; // sets to 250Hz
     let rom_filename = &args[3];
 
     let sdl_context = sdl2::init().unwrap();
