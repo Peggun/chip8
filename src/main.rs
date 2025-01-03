@@ -1,131 +1,152 @@
-use std::{env, thread};
-use std::io::{Read};
-use std::process;
-use std::time::{Duration, Instant};
-
-use chip8emu::chip8::*;
-
-extern crate sdl2;
-use chip8emu::platform::Platform;
-use rand::Rng;
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::sys::{
-    SDL_Event, SDL_SetWindowPosition,
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+    time::{Duration, Instant},
 };
 
+use chip8emu::chip8::*;
+use chip8emu::platform::Platform;
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
+use sdl2::sys::{SDL_Event, SDL_SetWindowPosition};
+
+use eframe::egui;
 
 fn main() {
     println!("CHIP-8 Emulator Starting...");
-    let args: Vec<String> = env::args().collect();  
+    let args: Vec<String> = std::env::args().collect();
 
     if args.len() != 4 {
         eprintln!("Usage: {} <Scale> <Delay> <ROM>", args[0]);
-        process::exit(1);
+        std::process::exit(1);
     }
 
     let video_scale = args[1].parse::<u16>().expect("Failed to parse Scale");
-    let cycle_delay = 4; // sets to 250Hz
+    let cycle_delay = 2; // 500Hz
     let rom_filename = &args[3];
 
-    let sdl_context = sdl2::init().unwrap();
-    let mut event_pump = sdl_context.event_pump().unwrap();
-
-    let mut platform = Platform::new(
-        "CHIP-8 Emulator",
-        (VIDEO_WIDTH * video_scale as usize) as i32,
-        (VIDEO_HEIGHT * video_scale as usize) as i32,
-        VIDEO_WIDTH as i32,
-        VIDEO_HEIGHT as i32,
-    );
-
-    unsafe {
-        SDL_SetWindowPosition(
-            platform.window,
-            sdl2::sys::SDL_WINDOWPOS_CENTERED_MASK as i32,
-            sdl2::sys::SDL_WINDOWPOS_CENTERED_MASK as i32,
-        );
-    }
-
-    let mut chip8 = Chip8::new();
-    println!("Loading ROM: {}", rom_filename);
-    chip8.load_rom(rom_filename);
+    // Shared CHIP-8 state
+    let chip8 = Arc::new(Mutex::new(Chip8::new()));
+    chip8.lock().unwrap().load_rom(rom_filename);
     println!("ROM loaded");
 
-    let mut quit = false;
-    let video_pitch = std::mem::size_of::<u32>() * VIDEO_WIDTH;
-    let mut last_cycle_time = Instant::now();
+    // Start Emulator in a Secondary Thread
+    let chip8_for_emulator = chip8.clone();
+    thread::spawn(move || {
+        let sdl_context = sdl2::init().unwrap();
+        let mut event_pump = sdl_context.event_pump().unwrap();
 
-    loop {
-        let mut quit = false;
-        let mut event = SDL_Event { type_: 0 };
-    
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::KeyUp { keycode: Some(keycode), .. } => {
-                    match keycode {
-                        Keycode::Num1 => chip8.key(0x1, false),
-                        Keycode::Num2 => chip8.key(0x2, false),
-                        Keycode::Num3 => chip8.key(0x3, false),
-                        Keycode::Num4 => chip8.key(0xC, false),
-                        Keycode::Q => chip8.key(0x4, false),
-                        Keycode::W => chip8.key(0x5, false),
-                        Keycode::E => chip8.key(0x6, false),
-                        Keycode::R => chip8.key(0xD, false),
-                        Keycode::A => chip8.key(0x7, false),
-                        Keycode::S => chip8.key(0x8, false),
-                        Keycode::D => chip8.key(0x9, false),
-                        Keycode::F => chip8.key(0xE, false),
-                        Keycode::Z => chip8.key(0xA, false),
-                        Keycode::X => chip8.key(0x0, false),
-                        Keycode::C => chip8.key(0xB, false),
-                        Keycode::V => chip8.key(0xF, false),
-                        _ => (),
+        let mut platform = Platform::new(
+            "CHIP-8 Emulator",
+            (VIDEO_WIDTH * video_scale as usize) as i32,
+            (VIDEO_HEIGHT * video_scale as usize) as i32,
+            VIDEO_WIDTH as i32,
+            VIDEO_HEIGHT as i32,
+        );
+
+        unsafe {
+            SDL_SetWindowPosition(
+                platform.window,
+                sdl2::sys::SDL_WINDOWPOS_CENTERED_MASK as i32,
+                sdl2::sys::SDL_WINDOWPOS_CENTERED_MASK as i32,
+            );
+        }
+
+        let video_pitch = std::mem::size_of::<u32>() * VIDEO_WIDTH;
+        let mut last_cycle_time = Instant::now();
+
+        loop {
+            for event in event_pump.poll_iter() {
+                match event {
+                    Event::KeyDown { keycode: Some(keycode), .. } => {
+                        let mut chip8 = chip8_for_emulator.lock().unwrap();
+                        chip8.key(get_key_mapping(keycode), true);
                     }
-                },
-                Event::KeyDown { keycode: Some(keycode), .. } => {
-                    match keycode {
-                        Keycode::Num1 => chip8.key(0x1, true),
-                        Keycode::Num2 => chip8.key(0x2, true),
-                        Keycode::Num3 => chip8.key(0x3, true),
-                        Keycode::Num4 => chip8.key(0xC, true),
-                        Keycode::Q => chip8.key(0x4, true),
-                        Keycode::W => chip8.key(0x5, true),
-                        Keycode::E => chip8.key(0x6, true),
-                        Keycode::R => chip8.key(0xD, true),
-                        Keycode::A => chip8.key(0x7, true),
-                        Keycode::S => chip8.key(0x8, true),
-                        Keycode::D => chip8.key(0x9, true),
-                        Keycode::F => chip8.key(0xE, true),
-                        Keycode::Z => chip8.key(0xA, true),
-                        Keycode::X => chip8.key(0x0, true),
-                        Keycode::C => chip8.key(0xB, true),
-                        Keycode::V => chip8.key(0xF, true),
-                        _ => (),
+                    Event::KeyUp { keycode: Some(keycode), .. } => {
+                        let mut chip8 = chip8_for_emulator.lock().unwrap();
+                        chip8.key(get_key_mapping(keycode), false);
                     }
-                },
-                _ => (),
+                    _ => {}
+                }
+            }
+
+            let current_time = Instant::now();
+            let dt = (current_time - last_cycle_time).as_millis() as f32;
+
+            if dt >= cycle_delay as f32 {
+                let mut chip8 = chip8_for_emulator.lock().unwrap();
+                chip8.cycle();
+                platform.update(
+                    chip8.display.as_ptr() as *const std::ffi::c_void,
+                    video_pitch.try_into().unwrap(),
+                );
+
+                last_cycle_time = Instant::now();
+            } else {
+                thread::sleep(Duration::from_millis((cycle_delay as f32 - dt) as u64));
             }
         }
+    });
 
-        let current_time = Instant::now();
-        let dt = (current_time - last_cycle_time).as_millis() as f32;
+    // Run Debug Stats GUI on Main Thread
+    let chip8_for_gui = chip8.clone();
+    let options = eframe::NativeOptions::default();
+    let _ = eframe::run_native(
+        "CHIP-8 Debug Stats",
+        options,
+        Box::new(|_cc| Ok(Box::new(DebugApp::new(chip8_for_gui)))),
+    );
+}
 
-        if dt >= cycle_delay as f32 {
-            chip8.cycle(); // Run a single cycle of the emulator
-
-            platform.update(
-                chip8.display.as_ptr() as *const std::ffi::c_void,
-                video_pitch.try_into().unwrap(),
-            );
-
-            last_cycle_time = Instant::now(); // Reset the cycle time
-        } else {
-            // Sleep to avoid overloading the CPU if cycles are executing too quickly
-            let remaining_time = cycle_delay as f32 - dt;
-            thread::sleep(Duration::from_millis(remaining_time as u64));
-        }
+// Key mapping for the CHIP-8 keyboard
+fn get_key_mapping(keycode: Keycode) -> u8 {
+    match keycode {
+        Keycode::Num1 => 0x1,
+        Keycode::Num2 => 0x2,
+        Keycode::Num3 => 0x3,
+        Keycode::Num4 => 0xC,
+        Keycode::Q => 0x4,
+        Keycode::W => 0x5,
+        Keycode::E => 0x6,
+        Keycode::R => 0xD,
+        Keycode::A => 0x7,
+        Keycode::S => 0x8,
+        Keycode::D => 0x9,
+        Keycode::F => 0xE,
+        Keycode::Z => 0xA,
+        Keycode::X => 0x0,
+        Keycode::C => 0xB,
+        Keycode::V => 0xF,
+        _ => 0xFF,
     }
+}
 
-    println!("Exiting CHIP-8 Emulator.");
+// Debug Stats GUI
+struct DebugApp {
+    chip8: Arc<Mutex<Chip8>>,
+}
+
+impl DebugApp {
+    fn new(chip8: Arc<Mutex<Chip8>>) -> Self {
+        Self { chip8 }
+    }
+}
+
+impl eframe::App for DebugApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let chip8 = self.chip8.lock().unwrap();
+            ui.heading("CHIP-8 Debug Stats");
+            ui.label(format!("PC: {:04X}", chip8.pc));
+            ui.label(format!("Index: {:04X}", chip8.index));
+            ui.label(format!("SP: {}", chip8.sp));
+            for (idx, reg) in chip8.registers.iter().enumerate() {
+                ui.label(format!("V{:X}: {:02X}", idx, reg));
+            }
+            ui.label(format!("Delay Timer: {}", chip8.delay_timer));
+            ui.label(format!("Sound Timer: {}", chip8.sound_timer));
+        });
+
+        ctx.request_repaint();
+    }
 }

@@ -7,5 +7,9 @@ build = "build.rs"
 
 [dependencies]
 clap = { version = "4.5.23", features = ["derive"] }
+eframe = "0.30.0"
+egui = "0.30.0"
+epi = "0.17.0"
 rand = "0.8.5"
+rand_chacha = "0.3.1"
 sdl2 = "0.37.0"

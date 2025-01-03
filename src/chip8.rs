@@ -1,6 +1,6 @@
-use std::io::Read;
+use std::{io::Read, sync::{Arc, Mutex}};
 
-use rand::Rng;
+use rand::{rngs::{StdRng, ThreadRng}, Rng, SeedableRng};
 
 pub const START_ADDRESS: usize = 0x200;
 pub const FONTSET_SIZE: usize = 80;
@@ -46,7 +46,7 @@ pub struct Chip8 {
     pub tableE: [Option<fn(&mut Chip8)>; 0xE + 1],
     pub tableF: [Option<fn(&mut Chip8)>; 0x65 + 1],
 
-    pub rand_gen: rand::rngs::ThreadRng,
+    pub rand_gen: StdRng,
 }
 
 impl Chip8 {
@@ -69,7 +69,7 @@ impl Chip8 {
             tableE: [None; 0xE + 1],
             tableF: [None; 0x65 + 1],
 
-            rand_gen: rand::thread_rng(),
+            rand_gen: StdRng::from_entropy(),
         };
 
         chip8.pc = START_ADDRESS as u16;
@@ -352,10 +352,8 @@ impl Chip8 {
         let vx: u8 = ((self.opcode & 0x0F00) >> 8) as u8;
         let byte: u8 = (self.opcode & 0x00FF) as u8;
 
-        let random_byte: u8 = self
-            .rand_gen
-            .sample(rand::distributions::Uniform::new_inclusive(0, 255));
-        self.registers[vx as usize] = random_byte & byte;
+        let rng: u8 = self.rand_gen.gen();
+        self.registers[vx as usize] = rng & byte;
     }
 
     pub fn OP_DXYN(&mut self) {
