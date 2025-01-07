@@ -1,6 +1,12 @@
-use std::{io::Read, sync::{Arc, Mutex}};
+use std::{
+    io::Read,
+    sync::{Arc, Mutex},
+};
 
-use rand::{rngs::{StdRng, ThreadRng}, Rng, SeedableRng};
+use rand::{
+    rngs::{StdRng, ThreadRng},
+    Rng, SeedableRng,
+};
 
 pub const START_ADDRESS: usize = 0x200;
 pub const FONTSET_SIZE: usize = 80;
@@ -37,7 +43,7 @@ pub struct Chip8 {
     pub delay_timer: u8,
     pub sound_timer: u8,
     pub keypad: [u8; 16],
-    pub display: [u32; 64 * 32],
+    pub display: [u32; VIDEO_WIDTH * VIDEO_HEIGHT],
     pub opcode: u16,
 
     pub table: [Option<fn(&mut Chip8)>; 0xF + 1],
@@ -61,7 +67,7 @@ impl Chip8 {
             delay_timer: 0,
             sound_timer: 0,
             keypad: [0; 16],
-            display: [0; 64 * 32],
+            display: [0; VIDEO_WIDTH * VIDEO_HEIGHT],
             opcode: 0,
             table: [None; 0xF + 1],
             table0: [None; 0xE + 1],
@@ -75,8 +81,10 @@ impl Chip8 {
         chip8.pc = START_ADDRESS as u16;
 
         // Load fontset
-        for i in 0..FONTSET_SIZE {
-            chip8.memory[FONTSET_START_ADDRESS + i] = FONTSET[i];
+        let mut i = 0;
+        for j in 0..FONTSET_SIZE {
+            chip8.memory[FONTSET_START_ADDRESS + i] = FONTSET[j];
+            i += 1;
         }
 
         // Setup RNG
@@ -360,33 +368,33 @@ impl Chip8 {
         let vx = ((self.opcode & 0x0F00u16) >> 8) as u8;
         let vy = ((self.opcode & 0x00F0u16) >> 4) as u8;
         let height = (self.opcode & 0x000Fu16) as u8;
-    
+
         let x_pos = self.registers[vx as usize] % VIDEO_WIDTH as u8;
         let y_pos = self.registers[vy as usize] % VIDEO_HEIGHT as u8;
-    
+
         self.registers[0xF] = 0;
-    
+
         for row in 0..height {
             let sprite_byte = self.memory[self.index as usize + row as usize];
-    
-            for col in 0..8 { // We have 8 columns to deal with (not just 7)
+
+            for col in 0..8 {
+                // We have 8 columns to deal with (not just 7)
                 let sprite_pixel = sprite_byte & (0x80 >> col);
                 let display_x = (x_pos as usize + col as usize) % VIDEO_WIDTH; // Wrap around to the other side of the screen
                 let display_y = (y_pos as usize + row as usize) % VIDEO_HEIGHT; // Same for vertical
-    
+
                 let screen_pixel = &mut self.display[display_y * VIDEO_WIDTH + display_x];
-    
+
                 if sprite_pixel != 0 {
                     if *screen_pixel == 0xFFFFFFFF {
                         self.registers[0xF] = 1;
                     }
-    
+
                     *screen_pixel ^= 0xFFFFFFFF; // XOR to flip the pixel
                 }
             }
         }
     }
-    
 
     pub fn OP_EX9E(&mut self) {
         let vx: u8 = ((self.opcode & 0x0F00) >> 8) as u8;
@@ -413,7 +421,7 @@ impl Chip8 {
 
     pub fn OP_FX0A(&mut self) {
         let vx = ((self.opcode & 0x0F00) >> 8) as u8;
-        
+
         if self.keypad[0] != 0 {
             self.registers[vx as usize] = 0;
         } else if self.keypad[1] != 0 {
@@ -502,7 +510,8 @@ impl Chip8 {
     }
 
     pub fn cycle(&mut self) {
-        self.opcode = ((self.memory[self.pc as usize] as u16) << 8) | self.memory[(self.pc + 1) as usize] as u16;
+        self.opcode = ((self.memory[self.pc as usize] as u16) << 8)
+            | self.memory[(self.pc + 1) as usize] as u16;
 
         self.pc += 2;
 

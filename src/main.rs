@@ -58,11 +58,17 @@ fn main() {
         loop {
             for event in event_pump.poll_iter() {
                 match event {
-                    Event::KeyDown { keycode: Some(keycode), .. } => {
+                    Event::KeyDown {
+                        keycode: Some(keycode),
+                        ..
+                    } => {
                         let mut chip8 = chip8_for_emulator.lock().unwrap();
                         chip8.key(get_key_mapping(keycode), true);
                     }
-                    Event::KeyUp { keycode: Some(keycode), .. } => {
+                    Event::KeyUp {
+                        keycode: Some(keycode),
+                        ..
+                    } => {
                         let mut chip8 = chip8_for_emulator.lock().unwrap();
                         chip8.key(get_key_mapping(keycode), false);
                     }

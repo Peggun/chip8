@@ -1,6 +1,11 @@
 extern crate sdl2;
 
-use sdl2::sys::{SDL_CreateRenderer, SDL_CreateTexture, SDL_CreateWindow, SDL_DestroyRenderer, SDL_DestroyTexture, SDL_DestroyWindow, SDL_Event, SDL_Init, SDL_PollEvent, SDL_Quit, SDL_RenderClear, SDL_RenderCopy, SDL_RenderPresent, SDL_Renderer, SDL_Texture, SDL_UpdateTexture, SDL_Window, SDL_WindowFlags, SDL_INIT_VIDEO};
+use sdl2::sys::{
+    SDL_CreateRenderer, SDL_CreateTexture, SDL_CreateWindow, SDL_DestroyRenderer,
+    SDL_DestroyTexture, SDL_DestroyWindow, SDL_Event, SDL_Init, SDL_PollEvent, SDL_Quit,
+    SDL_RenderClear, SDL_RenderCopy, SDL_RenderPresent, SDL_Renderer, SDL_Texture,
+    SDL_UpdateTexture, SDL_Window, SDL_WindowFlags, SDL_INIT_VIDEO,
+};
 
 pub const SDL_RENDERER_ACCELERATED: u32 = 0x00000002;
 pub const SDL_PIXELFORMAT_RGBA8888: u32 = 0x16762004;
