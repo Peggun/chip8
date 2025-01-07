@@ -51,7 +51,7 @@ USERNAME="username"
 ```
 
 And now we are all done!
-Just run the emulator using:
+Just run the emulator using: Just note the cycle delay doesnt do anything.
 ```sh
-cargo run [display scale] [path to ROM]
+cargo run [display scale] [cycle delay] [path to ROM]
 ```
