@@ -1,5 +1,5 @@
-# Chip8Emu
-Chip8Emu is a simple Chip-8 Emulation tool built on Rust fit with multiple ROM's (thanks to [https://github.com/dmatlack/chip8/](https://github.com/dmatlack/chip8/))<br>
+# Chip8
+A simple Chip-8 Emulation tool built on Rust fit with multiple ROM's (thanks to [https://github.com/dmatlack/chip8/](https://github.com/dmatlack/chip8/))<br>
 If you would like to play the game but are unsure how, please go to this repository, and read the .txt files for the game that you would like to play, these have the binds and more.
 <br>
 <br>
@@ -37,11 +37,11 @@ Navigate to this folder:
 C:\Users\{}\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\x86_64-pc-windows-msvc\lib"
 and paste all of the files there.
 
-## Chip8Emu Setup
+## Chip8 Setup
 Now we need to setup the Emulation
 Clone the repository using:
 ```sh
-git clone https://github.com/Peggun/chip8emu.git
+git clone https://github.com/Peggun/chip8.git
 ```
 
 Then go into this new folder and create a new .env file. This is where you will put your Windows PC username for the computer to find the SDL2.dll file
